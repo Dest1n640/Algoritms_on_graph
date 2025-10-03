@@ -9,6 +9,9 @@ AntEdge::AntEdge(Node* b, Node* e, int w, double p)
 Node* Edge::getEnd() const { return end; }
 int Edge::getWeight() const { return weight; }
 double AntEdge::getPheromone() const { return pheromone; }
+void AntEdge::setPheromone(double p){
+  pheromone = p;
+} 
 
 std::ostream& operator<<(std::ostream& os, const Edge& edge) {
   os << "-> " << edge.getEnd()->getName() << " (Weight: " << edge.getWeight() << ")";

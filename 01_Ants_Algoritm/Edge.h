@@ -18,8 +18,9 @@ public:
 class AntEdge : public Edge{
   double pheromone;
 public:
-  AntEdge(Node* b, Node* e, int w, double p = 0.0);
+  AntEdge(Node* b, Node* e, int w, double p = 1.0);
   double getPheromone() const;
+  void setPheromone(double p);
   friend std::ostream& operator<<(std::ostream& os, const AntEdge& edge);
 };
 

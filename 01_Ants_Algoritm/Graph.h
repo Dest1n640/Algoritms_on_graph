@@ -18,6 +18,7 @@ public:
   void addEdge(const std::string& beginName, const std::string& endName, Args... args);
   const std::vector<EdgeType>& getNeighbors(Node* node) const;
   const std::map<Node*, std::vector<EdgeType>>& getGraph() const;
+  std::map<Node*, std::vector<EdgeType>>& getGraphNonConst();
 
 };
 template<typename EdgeType>
@@ -51,6 +52,10 @@ const std::vector<EdgeType>& Graph<EdgeType>::getNeighbors(Node* node) const{
 }
 template<typename EdgeType>
 const std::map<Node*, std::vector<EdgeType>>& Graph<EdgeType>::getGraph() const{
+  return graph;
+}
+template<typename EdgeType>
+std::map<Node*, std::vector<EdgeType>>& Graph<EdgeType>::getGraphNonConst(){
   return graph;
 }
 

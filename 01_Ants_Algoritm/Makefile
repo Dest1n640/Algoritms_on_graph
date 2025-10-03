@@ -1,7 +1,7 @@
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -O2
 
-SRC = main.cpp Edge.cpp
+SRC = main.cpp Edge.cpp AntAlgoritms.cpp
 OBJ = $(SRC:.cpp=.o)
 TARGET = main
 
