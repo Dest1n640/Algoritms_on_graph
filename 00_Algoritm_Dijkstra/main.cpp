@@ -80,20 +80,16 @@ int main(){
         }
     }
 
-    // --- ШАГ 5: Проверка и запуск алгоритма ---
     if (startNode == nullptr || endNode == nullptr) {
         std::cerr << "Ошибка: Один или оба узла ('" << startName << "', '" << endName << "') не найдены в графе." << std::endl;
         return 1; // Завершаем программу с кодом ошибки
     }
 
-    // Создаем объект Дейкстры, передавая ему нашу "карту" (граф)
     Dijkstra dijkstra_solver(myGraph);
     
     std::cout << "\nЗапускаем поиск кратчайшего пути...\n";
-    // Запускаем поиск и получаем результат
     Way path = dijkstra_solver.shortestWay(startNode, endNode);
 
-    // --- ШАГ 6: Вывод результата ---
     std::cout << "\n--- Результаты поиска ---\n";
     if (path.length < 0) {
         std::cout << "Путь из '" << startName << "' в '" << endName << "' не найден.\n";
@@ -111,6 +107,6 @@ int main(){
     }
     std::cout << "---------------------------\n";
 
-    return 0;
+   return 0;
 }
 

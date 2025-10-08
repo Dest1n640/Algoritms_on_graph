@@ -19,6 +19,8 @@ double Ant::getPathLength() const{
 const std::vector<AntEdge*>& Ant::getPath() const{
   return path;
 }
+
+
 bool Ant::reached(Node* target){
   return currentNode == target;
 }
@@ -35,7 +37,7 @@ AntEdge* Ant::chooseNextNode(const std::vector<AntEdge*>& neighbors){
       denominator += probabilities.back();
   }
 
-  if (denominator == 0.0) { // Если все пути имеют 0 привлекательность
+  if (denominator == 0.0) {
       return nullptr;
   }
 
@@ -54,7 +56,7 @@ AntEdge* Ant::chooseNextNode(const std::vector<AntEdge*>& neighbors){
           return neighbors[i]; // Возвращаем указатель на оригинальное ребро
       }
   }
-  return neighbors.back(); // На случай ошибок округления
+  return neighbors.back();
 }
 
 bool Ant::is_visited(Node* nextNode){
@@ -73,7 +75,7 @@ void Ant::reset(Node* startNode){
   path.clear();
   visited.clear();
   if (startNode) {
-      visited.insert(startNode); // Важно: стартовый узел тоже посещен
+      visited.insert(startNode);
   }
   pathLength = 0;
 }
@@ -88,13 +90,12 @@ void AntColonyOptimization::runIteration(Node* start, Node* end){
   for (auto& ant : ants){
     while(ant.getCurrentNode() != end){
       Node* currnode = ant.getCurrentNode();
-      // Получаем изменяемые ребра, чтобы можно было взять на них указатели
       std::vector<AntEdge>& all_neighbors = graph.getGraphNonConst().at(currnode);
       
       std::vector<AntEdge*> available_neighbors;
       for(AntEdge& edge : all_neighbors){
         if (!ant.is_visited(edge.getEnd())){
-          available_neighbors.push_back(&edge); // Собираем указатели
+          available_neighbors.push_back(&edge);
         }
       }
 
@@ -105,7 +106,7 @@ void AntColonyOptimization::runIteration(Node* start, Node* end){
       AntEdge* chosen_edge = ant.chooseNextNode(available_neighbors);
       
       if (chosen_edge){
-        ant.visitNode(chosen_edge); // Передаем указатель на ребро
+        ant.visitNode(chosen_edge);
       } else {
         break;
       }
@@ -140,7 +141,7 @@ AntColonyOptimization::AntColonyOptimization(Graph <AntEdge>& g, int numAnts): g
 };
 
 double AntColonyOptimization::run(Node* startNode, Node* endNode, int iterations) {
-    double bestPathLength = -1.0; // Используем -1.0 как признак того, что путь еще не найден
+    double bestPathLength = -1.0;
 
     for (int i = 0; i < iterations; ++i) {
         // 1. Запускаем всех муравьев для построения путей
@@ -149,12 +150,10 @@ double AntColonyOptimization::run(Node* startNode, Node* endNode, int iterations
         // 2. Обновляем феромоны на графе
         updatePheromones(endNode);
 
-        // 3. Ищем лучший путь, найденный в этой итерации
+        // 3. Ищем лучший путь найденный в этой итерации
         for (const auto& ant : ants) {
-            // Проверяем, достиг ли муравей цели
             if (ant.getCurrentNode() == endNode) {
                 double currentPathLength = ant.getPathLength();
-                // Если это первый найденный путь или он короче лучшего из предыдущих
                 if (bestPathLength == -1.0 || currentPathLength < bestPathLength) {
                     bestPathLength = currentPathLength;
                 }
@@ -163,4 +162,59 @@ double AntColonyOptimization::run(Node* startNode, Node* endNode, int iterations
     }
 
     return bestPathLength;
+}
+
+
+std::pair<double, std::vector<AntEdge*>> AntColonyOptimization::HamCycle(Node* startNode, int iterations){
+    double bestCycleLength = -1.0;
+    std::vector<AntEdge*> bestPath;
+    const size_t totalNodes = graph.getGraph().size();
+
+    for (int i = 0; i < iterations; ++i) {
+        resetAnts(startNode);
+
+        for (auto& ant : ants) {
+            while (ant.getPath().size() < totalNodes - 1) {
+                Node* currnode = ant.getCurrentNode();
+                std::vector<AntEdge>& all_neighbors = graph.getGraphNonConst().at(currnode);
+                
+                std::vector<AntEdge*> available_neighbors;
+                for (AntEdge& edge : all_neighbors) {
+                    if (!ant.is_visited(edge.getEnd())) {
+                        available_neighbors.push_back(&edge);
+                    }
+                }
+
+                if (available_neighbors.empty()) {
+                    break;
+                }
+
+                AntEdge* chosen_edge = ant.chooseNextNode(available_neighbors);
+                if (chosen_edge) {
+                    ant.visitNode(chosen_edge);
+                } else {
+                    break;
+                }
+            }
+
+            if (ant.getPath().size() == totalNodes - 1) {
+                Node* lastNode = ant.getCurrentNode();
+                const auto& neighbors = graph.getNeighbors(lastNode);
+                for (const auto& edge : neighbors) {
+                    if (edge.getEnd() == startNode) {
+                        double currentCycleLength = ant.getPathLength() + edge.getWeight();
+                        if (bestCycleLength == -1.0 || currentCycleLength < bestCycleLength) {
+                            bestCycleLength = currentCycleLength;
+                            bestPath = ant.getPath();
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        
+        updatePheromones(startNode); 
+    }
+
+    return {bestCycleLength, bestPath};
 }

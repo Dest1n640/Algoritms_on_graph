@@ -3,6 +3,9 @@
 #include <string>
 #include "Node.h"
 
+//Edge - ключевой класс для моего графа
+//Хранит в себе вершину начальную, конечную и вес по дефолту
+
 class Edge{
   Node* begin;
   Node* end;

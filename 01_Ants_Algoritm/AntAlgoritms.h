@@ -13,14 +13,14 @@ extern double pheromoneDeposit; //triangle
 
 
 class Ant{
-  std::vector<AntEdge*> path; 
+  std::vector<AntEdge*> path;  
   std::set<Node*> visited;
   Node* currentNode;
   double pathLength;
   
 public:
   Ant();
-  AntEdge* chooseNextNode(const std::vector<AntEdge*>& neighbors);
+  AntEdge* chooseNextNode(const std::vector<AntEdge*>& neighbors); 
   bool reached(Node* target);
   bool is_visited(Node* nextNode);
   void visitNode(AntEdge* edge);
@@ -40,8 +40,11 @@ class AntColonyOptimization{
   void resetAnts(Node* startNode);
 
 public:
-  AntColonyOptimization(Graph<AntEdge>& g, int numAnts);
-  double run(Node* startNode, Node* endNode, int iterations);
+  AntColonyOptimization(Graph<AntEdge>& g, int numAnts = 1000);
+  double run(Node* startNode, Node* endNode, int iterations); 
+  //Для поиска кратчайшего пути
+
+  std::pair<double, std::vector<AntEdge*>> HamCycle(Node* startNode, int iterations);
 };
 
 #endif
