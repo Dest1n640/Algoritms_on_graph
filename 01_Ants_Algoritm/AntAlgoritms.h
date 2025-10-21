@@ -1,8 +1,8 @@
 #ifndef ANT_ALGORITHMS_H
 #define ANT_ALGORITHMS_H
 
-#include "Graph.h"
-#include "Edge.h"
+#include "../My_graph/Graph.h"
+#include "../My_graph/Edge.h"
 #include <set>
 #include <vector>
 

@@ -1,5 +1,6 @@
 #include "AntAlgoritms.h"
-#include "Edge.h"
+#include "../My_graph/Edge.h"
+#include "../My_graph/Node.h"
 #include <random>
 #include <math.h>
 

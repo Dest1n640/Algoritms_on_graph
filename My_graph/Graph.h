@@ -23,6 +23,7 @@ public:
   const std::vector<EdgeType>& getNeighbors(Node* node) const;
   const std::map<Node*, std::vector<EdgeType>>& getGraph() const;
   std::map<Node*, std::vector<EdgeType>>& getGraphNonConst();
+  Node* findNode(const std::string& name) const;
 
 };
 template<typename EdgeType>
@@ -91,6 +92,14 @@ std::ostream& operator<<(std::ostream& os, const Graph<EdgeType>& g) {
     return os;
 }
 
+template<typename EdgeType>
+Node* Graph<EdgeType>::findNode(const std::string& name) const {
+    auto it = nodes.find(name);
+    if (it != nodes.end()) {
+        return it->second.get();
+    }
+    return nullptr;
+}
 
 
 

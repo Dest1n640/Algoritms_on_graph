@@ -1,52 +1,58 @@
+#include "Dijkstra.h"
 #include <vector>
 #include <map>
+#include <queue>
 #include <algorithm>
-#include "Node.h"
-#include "Dijkstra.h"
-#include "PriorityQueue.h"
-#include "Graph.h"
+#include <limits>
 
-Dijkstra::Dijkstra(const Graph&  agraph) : graph(agraph){}
+Dijkstra::Dijkstra(const Graph<Edge>& agraph) : graph(agraph) {}
 
-Way Dijkstra::unroll(const std::map<Node*, MarkedNode>& visited, Node* begin, Node* curr) {
-    Way way;
+Way Dijkstra::shortestWay(Node* startNode, Node* endNode) {
+    std::map<Node*, double> distances;
+    std::map<Node*, Node*> predecessors;
+    std::priority_queue<std::pair<double, Node*>, std::vector<std::pair<double, Node*>>, std::greater<std::pair<double, Node*>>> pq;
 
-    // 2. Используем .at() для const-безопасного ЧТЕНИЯ
-    way.length = visited.at(curr).mark;
-
-    while (curr != nullptr) { // Проверяем на nullptr, а не на begin
-        way.nodes.push_back(curr);
-        // Снова используем .at()
-        curr = visited.at(curr).prev;
+    for (const auto& pair : graph.getGraph()) {
+        distances[pair.first] = std::numeric_limits<double>::infinity();
+        predecessors[pair.first] = nullptr;
     }
 
-    // 3. Разворачиваем путь
-    std::reverse(way.nodes.begin(), way.nodes.end());
+    distances[startNode] = 0;
+    pq.push({0, startNode});
 
-    return way;
-}
+    while (!pq.empty()) {
+        Node* u = pq.top().second;
+        pq.pop();
 
-Way Dijkstra::shortestWay(Node* begin, Node* end){
-  PriorityQueue nodes;
-  nodes.push(begin, 0, 0);
-  std::map<Node*, MarkedNode> visited;
+        if (u == endNode) {
+            break; 
+        }
 
-  while(!nodes.empty()){
-    MarkedNode next = nodes.pop();
-    visited.insert({next.node, next});
+        if (distances[u] == std::numeric_limits<double>::infinity()) {
+            continue;
+        }
 
-    if(end==next.node)
-      return unroll(visited, begin, end); //Раскрутка
-
-    for (Node::node_iterator it = next.node->nb_begin(); it != next.node->nb_end(); ++it) { 
-      Node* neighbourd_node = it ->first;
-      int edge_weight = it -> second;
-
-      int new_total_weight = next.mark + edge_weight;
-
-      if(visited.find(neighbourd_node) == visited.end())
-        nodes.push(neighbourd_node, new_total_weight, next.node);
+        for (const auto& edge : graph.getNeighbors(u)) {
+            Node* v = edge.getEnd();
+            double weight = edge.getWeight();
+            if (distances[u] + weight < distances[v]) {
+                distances[v] = distances[u] + weight;
+                predecessors[v] = u;
+                pq.push({distances[v], v});
+            }
+        }
     }
-  }
-  return Way();
+
+    Way path;
+    if (distances[endNode] != std::numeric_limits<double>::infinity()) {
+        path.length = distances[endNode];
+        Node* current = endNode;
+        while (current != nullptr) {
+            path.nodes.push_back(current);
+            current = predecessors[current];
+        }
+        std::reverse(path.nodes.begin(), path.nodes.end());
+    }
+
+    return path;
 }

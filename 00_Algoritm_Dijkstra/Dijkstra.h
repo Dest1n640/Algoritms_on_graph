@@ -1,24 +1,26 @@
 #ifndef DIJKSTRA_H
 #define DIJKSTRA_H
-#include <vector>
-#include "Node.h"
-#include "Graph.h"
-#include "PriorityQueue.h"
 
-struct  Way
-{
-  std::vector<Node*> nodes;
-  int length;
-  Way() : length(-1){}
+#include <vector>
+#include <map>
+#include <queue>
+#include <limits>
+#include <algorithm>
+#include "../My_graph/Node.h"
+#include "../My_graph/Graph.h"
+#include "../My_graph/Edge.h"
+
+struct Way {
+    std::vector<Node*> nodes;
+    double length = -1.0;
 };
 
 class Dijkstra{
-  const Graph& graph;
-public:
-  Dijkstra(const Graph& agraph);
-  Way shortestWay(Node* begin, Node* end);
-  static Way unroll(const std::map<Node*, MarkedNode>& visited, Node* begin, Node* curr);
-};
+  const Graph<Edge>& graph;
 
+public:
+  Dijkstra(const Graph<Edge>& graph);
+  Way shortestWay(Node* startNode, Node* endNode);
+};
 
 #endif

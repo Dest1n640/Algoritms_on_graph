@@ -1,102 +1,78 @@
-#include "Graph.h"
-#include "Node.h"
+#include "../My_graph/Graph.h"
+#include "../My_graph/Node.h"
+#include "../My_graph/Edge.h"
 #include "Dijkstra.h"
 #include <fstream>
 #include <sstream>
 #include <string>
 #include <vector>
 #include <iostream>
-#include <map>
 
+Graph<Edge> makeGraph(const std::string& file_name){
+    Graph<Edge> graph;
 
-Graph makeGraph(const std::string& file_name){
-  Graph graph;
-
-  std::ifstream inputFile(file_name);
-  if (!inputFile.is_open()){
-      std::cout << "Error" << std::endl;
-      return graph;
-  }
-
-  std::map<std::string, Node*> nodeRegistry;;
-  std::string line;
-
-  std::getline(inputFile, line);
-  
-  while(std::getline(inputFile, line)){
-    std::istringstream iss(line);
-    std::string startName, endName;
-    int weight;
-    
-    if (iss >> startName >> endName >> weight){
-      Node* startNode = nullptr;
-      Node* endNode = nullptr;
-
-      if (nodeRegistry.find(startName) == nodeRegistry.end()){
-        startNode = new Node(startName);
-        nodeRegistry[startName] = startNode;
-        graph.addNode(startNode);
-      }
-      else
-        startNode = nodeRegistry[startName];
-
-      if (nodeRegistry.find(endName) == nodeRegistry.end()){
-        endNode = new Node(endName);
-        nodeRegistry[endName] = endNode;
-        graph.addNode(endNode);
-      }
-      else
-        endNode = nodeRegistry[endName];
-
-      graph.addEdge(startNode, endNode, weight);
+    std::ifstream inputFile(file_name);
+    if (!inputFile.is_open()){
+        std::cerr << "Could not open file " << file_name << std::endl;
+        return graph;
     }
 
-  }
-  inputFile.close();
-  return graph;
+    std::string line;
+    std::getline(inputFile, line);
+
+    while(std::getline(inputFile, line)){
+        std::istringstream iss(line);
+        std::string startName, endName;
+        int weight;
+
+        if (iss >> startName >> endName >> weight){
+            graph.addEdge(startName, endName, weight);
+        }
+    }
+    inputFile.close();
+    return graph;
 }
 
-int main(){
-    const std::string filename = "1000.txt";
-    Graph myGraph = makeGraph(filename);
+int main(int argc, char* argv[]){
+    if (argc < 2) {
+        std::cerr << "Usage: " << argv[0] << " <filename>" << std::endl;
+        return 1;
+    }
+
+    const std::string filename = argv[1];
+    Graph<Edge> myGraph = makeGraph(filename);
+
+    if (myGraph.getGraph().empty()) {
+        std::cerr << "Graph is empty or could not be created." << std::endl;
+        return 1;
+    }
 
     std::cout << myGraph;
     std::string startName, endName;
 
-    std::cout << "Введите название начальной вершины: ";
+    std::cout << "Enter the start node: ";
     std::cin >> startName;
-    std::cout << "Введите название конечной вершины:  ";
+    std::cout << "Enter the end node: ";
     std::cin >> endName;
 
-    Node* startNode = nullptr;
-    Node* endNode = nullptr;
-
-    for (Graph::graph_iterator it = myGraph.begin(); it != myGraph.end(); ++it) {
-        if ((*it)->getName() == startName) {
-            startNode = *it;
-        }
-        if ((*it)->getName() == endName) {
-            endNode = *it;
-        }
-    }
+    Node* startNode = myGraph.findNode(startName);
+    Node* endNode = myGraph.findNode(endName);
 
     if (startNode == nullptr || endNode == nullptr) {
-        std::cerr << "Ошибка: Один или оба узла ('" << startName << "', '" << endName << "') не найдены в графе." << std::endl;
-        return 1; // Завершаем программу с кодом ошибки
+        std::cerr << "One or both nodes ('" << startName << "', '" << endName << "') were not found in the graph." << std::endl;
+        return 1;
     }
 
     Dijkstra dijkstra_solver(myGraph);
-    
-    std::cout << "\nЗапускаем поиск кратчайшего пути...\n";
     Way path = dijkstra_solver.shortestWay(startNode, endNode);
 
-    std::cout << "\n--- Результаты поиска ---\n";
+    std::cout << "\n--- Search Results ---\n";
     if (path.length < 0) {
-        std::cout << "Путь из '" << startName << "' в '" << endName << "' не найден.\n";
+        std::cout << "Path from '" << startName << "' to '" << endName << "' not found.\n";
     } else {
-        std::cout << "Кратчайший путь найден!\n";
-        std::cout << "Общий вес (длина) пути: " << path.length << "\n";
-        std::cout << "Путь: ";
+        std::cout << "Shortest path found!\n";
+        std::cout << "Total path weight (length): " << path.length << "\n";
+        std::cout << "Path: ";
         for (size_t i = 0; i < path.nodes.size(); ++i) {
             std::cout << path.nodes[i]->getName();
             if (i < path.nodes.size() - 1) {
@@ -105,8 +81,7 @@ int main(){
         }
         std::cout << "\n";
     }
-    std::cout << "---------------------------\n";
+    std::cout << "------------------------\n";
 
-   return 0;
+    return 0;
 }
-
