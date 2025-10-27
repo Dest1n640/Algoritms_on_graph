@@ -17,6 +17,7 @@ class Ant{
   std::set<Node*> visited;
   Node* currentNode;
   double pathLength;
+  std::vector<double> PheromoneInPath(std::vector<AntEdge*> path); //Кол-во ферамонов за один путь муравья
   
 public:
   Ant();
@@ -34,17 +35,18 @@ public:
 class AntColonyOptimization{
   Graph<AntEdge>& graph;
   std::vector<Ant> ants;
+  int iterations;
   
   void runIteration(Node* startNode, Node* endNode);
   void updatePheromones(Node* endNode);
   void resetAnts(Node* startNode);
 
 public:
-  AntColonyOptimization(Graph<AntEdge>& g, int numAnts = 1000);
-  double run(Node* startNode, Node* endNode, int iterations); 
+  AntColonyOptimization(Graph<AntEdge>& g, int numAnts = 100, int iterations = 100);
+  std::pair<double, std::vector<Node*>> findShortestPath(Node* startNode, Node* endNode); 
   //Для поиска кратчайшего пути
 
-  std::pair<double, std::vector<AntEdge*>> HamCycle(Node* startNode, int iterations);
+  std::pair<double, std::vector<AntEdge*>> findHamiltonianCycle(Node* startNode);
 };
 
 #endif

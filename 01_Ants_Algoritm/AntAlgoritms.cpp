@@ -137,85 +137,101 @@ void AntColonyOptimization::updatePheromones(Node* endNode) {
         }
     }
 }
-AntColonyOptimization::AntColonyOptimization(Graph <AntEdge>& g, int numAnts): graph(g) {
+AntColonyOptimization::AntColonyOptimization(Graph <AntEdge>& g, int numAnts, int iterations): graph(g), iterations(iterations) {
   ants.resize(numAnts);
 };
 
-double AntColonyOptimization::run(Node* startNode, Node* endNode, int iterations) {
+std::pair<double, std::vector<Node*>> AntColonyOptimization::findShortestPath(Node* startNode, Node* endNode) {
     double bestPathLength = -1.0;
+    std::vector<Node*> bestPath;
 
     for (int i = 0; i < iterations; ++i) {
-        // 1. Запускаем всех муравьев для построения путей
         runIteration(startNode, endNode);
-
-        // 2. Обновляем феромоны на графе
         updatePheromones(endNode);
 
-        // 3. Ищем лучший путь найденный в этой итерации
         for (const auto& ant : ants) {
             if (ant.getCurrentNode() == endNode) {
                 double currentPathLength = ant.getPathLength();
-                if (bestPathLength == -1.0 || currentPathLength < bestPathLength) {
+                if (bestPathLength < 0 || currentPathLength < bestPathLength) {
                     bestPathLength = currentPathLength;
+                    bestPath.clear();
+                    bestPath.push_back(startNode);
+                    for(AntEdge* edge : ant.getPath()){
+                        bestPath.push_back(edge->getEnd());
+                    }
                 }
             }
         }
     }
-
-    return bestPathLength;
+    return {bestPathLength, bestPath};
 }
 
-
-std::pair<double, std::vector<AntEdge*>> AntColonyOptimization::HamCycle(Node* startNode, int iterations){
+std::pair<double, std::vector<AntEdge*>> AntColonyOptimization::findHamiltonianCycle(Node* startNode) {
     double bestCycleLength = -1.0;
-    std::vector<AntEdge*> bestPath;
-    const size_t totalNodes = graph.getGraph().size();
+    std::vector<AntEdge*> bestCycle;
 
     for (int i = 0; i < iterations; ++i) {
         resetAnts(startNode);
-
         for (auto& ant : ants) {
-            while (ant.getPath().size() < totalNodes - 1) {
+            while (true) {
                 Node* currnode = ant.getCurrentNode();
                 std::vector<AntEdge>& all_neighbors = graph.getGraphNonConst().at(currnode);
                 
                 std::vector<AntEdge*> available_neighbors;
-                for (AntEdge& edge : all_neighbors) {
-                    if (!ant.is_visited(edge.getEnd())) {
+                for(AntEdge& edge : all_neighbors){
+                    if (!ant.is_visited(edge.getEnd())){
                         available_neighbors.push_back(&edge);
                     }
                 }
 
-                if (available_neighbors.empty()) {
-                    break;
+                if (available_neighbors.empty()){
+                    break; 
                 }
 
                 AntEdge* chosen_edge = ant.chooseNextNode(available_neighbors);
-                if (chosen_edge) {
+                
+                if (chosen_edge){
                     ant.visitNode(chosen_edge);
                 } else {
                     break;
                 }
             }
 
-            if (ant.getPath().size() == totalNodes - 1) {
+            // Проверяем, вернулся ли муравей в начальную точку
+            if (ant.getPath().size() == graph.getGraph().size() - 1) {
                 Node* lastNode = ant.getCurrentNode();
-                const auto& neighbors = graph.getNeighbors(lastNode);
-                for (const auto& edge : neighbors) {
-                    if (edge.getEnd() == startNode) {
-                        double currentCycleLength = ant.getPathLength() + edge.getWeight();
-                        if (bestCycleLength == -1.0 || currentCycleLength < bestCycleLength) {
-                            bestCycleLength = currentCycleLength;
-                            bestPath = ant.getPath();
-                        }
-                        break;
+                AntEdge* closingEdge = graph.findEdge(lastNode, startNode);
+                if (closingEdge) {
+                    ant.visitNode(closingEdge); // Замыкаем цикл
+                    if (bestCycleLength < 0 || ant.getPathLength() < bestCycleLength) {
+                        bestCycleLength = ant.getPathLength();
+                        bestCycle = ant.getPath();
                     }
                 }
             }
         }
-        
-        updatePheromones(startNode); 
+        // Обновление феромонов для гамильтонова цикла
+        // (логика может отличаться от простого поиска пути)
+        for (auto& pair : graph.getGraphNonConst()) {
+            for (auto& edge : pair.second) {
+                double currentpheromone = edge.getPheromone();
+                edge.setPheromone(currentpheromone * (1.0 - evaporationRate));
+            }
+        }
+        for (const auto& ant : ants) {
+             if (ant.getPath().size() == graph.getGraph().size()) {
+                const auto& path = ant.getPath();
+                double pathLength = ant.getPathLength();
+                if (pathLength > 0) {
+                    double deltaPheromone = pheromoneDeposit / pathLength;
+                    for (AntEdge* edge : path) {
+                        double currentPheromone = edge->getPheromone();
+                        edge->setPheromone(currentPheromone + deltaPheromone);
+                    }
+                }
+            }
+        }
     }
 
-    return {bestCycleLength, bestPath};
+    return {bestCycleLength, bestCycle};
 }

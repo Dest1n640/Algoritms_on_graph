@@ -1,65 +1,143 @@
-#include "Graph.h"
-#include "Edge.h"
+#include "../My_graph/Graph.h"
+#include "../My_graph/Node.h"
+#include "../My_graph/Edge.h"
 #include "AntAlgoritms.h"
+#include <fstream>
+#include <sstream>
+#include <string>
+#include <vector>
 #include <iostream>
-#include <memory>
+#include <limits>
 
-int main() {
-    Graph<AntEdge> g;
+Graph<AntEdge> makeGraph(const std::string& file_name){
+    Graph<AntEdge> graph;
 
-    auto nodeA = g.addNode("A");
-    auto nodeB = g.addNode("B");
-    auto nodeC = g.addNode("C");
-    auto nodeD = g.addNode("D");
-    auto nodeG = g.addNode("G");
-    auto nodeF = g.addNode("F");
-    
-
-    g.addEdgeOne("A", "B", 3);
-    g.addEdgeOne("A", "F", 1);
-
-    g.addEdgeOne("B", "A", 3);
-    g.addEdgeOne("B", "C", 8);
-    g.addEdgeOne("B", "G", 3);
-
-    g.addEdgeOne("C", "B", 3);
-    g.addEdgeOne("C", "D", 1);
-    g.addEdgeOne("C", "G", 1);
-
-    g.addEdgeOne("D", "C", 8);
-    g.addEdgeOne("D", "F", 1);
-
-    g.addEdgeOne("F", "A", 3);
-    g.addEdgeOne("F", "D", 3);
-
-    g.addEdgeOne("G", "A", 3);
-    g.addEdgeOne("G", "B", 3);
-    g.addEdgeOne("G", "C", 3);
-    g.addEdgeOne("G", "F", 4);
-    g.addEdgeOne("G", "D", 5);
-
-
-    std::cout << "Initial graph:" << std::endl;
-    std::cout << g << std::endl;
-
-    int numAnts = 100;
-    int iterations = 50;
-    
-    AntColonyOptimization aco(g, numAnts);
-
-    std::cout << "Starting Ant Colony Optimization..." << std::endl;
-
-    auto [best_weight, best_path] = aco.HamCycle(nodeA, iterations);
-
-    if (best_weight != -1.0) {
-        std::cout << "\nAlgorithm finished." << std::endl;
-        std::cout << "Shortest path length found: " << best_weight << std::endl;
-    for (const auto& edge : best_path) {
-        std::cout << edge->getBegin()->getName() << " -> " << edge->getEnd()->getName() << " (weight: " << edge->getWeight() << ")\n";
+    std::ifstream inputFile(file_name);
+    if (!inputFile.is_open()){
+        std::cerr << "Could not open file " << file_name << std::endl;
+        return graph;
     }
+
+    std::string line;
+    std::getline(inputFile, line); // Пропускаем заголовок
+
+    while(std::getline(inputFile, line)){
+        std::istringstream iss(line);
+        std::string startName, endName;
+        int weight;
+
+        if (iss >> startName >> endName >> weight){
+            // Добавляем ребро AntEdge с начальным феромоном 1.0
+            graph.addEdge(startName, endName, weight, 1.0);
+        }
+    }
+    inputFile.close();
+    return graph;
+}
+
+// Печать результата для кратчайшего пути
+void printShortestPath(const std::pair<double, std::vector<Node*>>& result, const std::string& startName, const std::string& endName) {
+    std::cout << "\n--- Search Results ---\n";
+    if (result.first < 0 || result.second.empty()) {
+        std::cout << "Path from '" << startName << "' to '" << endName << "' not found.\n";
     } else {
-        std::cout << "\nAlgorithm finished." << std::endl;
-        std::cout << "Path not found." << std::endl;
+        std::cout << "Shortest path found!\n";
+        std::cout << "Total path weight (length): " << result.first << "\n";
+        std::cout << "Path: ";
+        for (size_t i = 0; i < result.second.size(); ++i) {
+            std::cout << result.second[i]->getName();
+            if (i < result.second.size() - 1) {
+                std::cout << " -> ";
+            }
+        }
+        std::cout << "\n";
+    }
+    std::cout << "------------------------\n";
+}
+
+// Печать результата для гамильтонова цикла
+void printHamiltonianCycle(const std::pair<double, std::vector<AntEdge*>>& result) {
+    std::cout << "\n--- Search Results ---\n";
+    if (result.first < 0 || result.second.empty()) {
+        std::cout << "Hamiltonian cycle not found.\n";
+    } else {
+        std::cout << "Hamiltonian cycle found!\n";
+        std::cout << "Total cycle weight (length): " << result.first << "\n";
+        std::cout << "Path: ";
+        for (size_t i = 0; i < result.second.size(); ++i) {
+            std::cout << result.second[i]->getBegin()->getName();
+            std::cout << " -> ";
+        }
+        // Замыкаем цикл
+        if (!result.second.empty()) {
+            std::cout << result.second.front()->getBegin()->getName();
+        }
+        std::cout << "\n";
+    }
+    std::cout << "------------------------\n";
+}
+
+
+int main(int argc, char* argv[]){
+    if (argc < 2) {
+        std::cerr << "Usage: " << argv[0] << " <filename>" << std::endl;
+        return 1;
+    }
+
+    const std::string filename = argv[1];
+    Graph<AntEdge> myGraph = makeGraph(filename);
+
+    if (myGraph.getGraph().empty()) {
+        std::cerr << "Graph is empty or could not be created." << std::endl;
+        return 1;
+    }
+
+    std::cout << myGraph;
+    
+    int choice;
+    std::cout << "\nChoose algorithm mode:\n";
+    std::cout << "1. Find shortest path between two nodes\n";
+    std::cout << "2. Find Hamiltonian cycle (Traveling Salesperson Problem)\n";
+    std::cout << "Enter your choice: ";
+    std::cin >> choice;
+
+    // Используем правильный конструктор
+    AntColonyOptimization aco_solver(myGraph, 100, 100);
+
+    if (choice == 1) {
+        std::string startName, endName;
+        std::cout << "Enter the start node: ";
+        std::cin >> startName;
+        std::cout << "Enter the end node: ";
+        std::cin >> endName;
+
+        Node* startNode = myGraph.findNode(startName);
+        Node* endNode = myGraph.findNode(endName);
+
+        if (startNode == nullptr || endNode == nullptr) {
+            std::cerr << "One or both nodes ('" << startName << "', '" << endName << "') were not found in the graph." << std::endl;
+            return 1;
+        }
+        // Вызываем findShortestPath и передаем результат в новую функцию печати
+        auto path = aco_solver.findShortestPath(startNode, endNode);
+        printShortestPath(path, startName, endName);
+
+    } else if (choice == 2) {
+        if (myGraph.getGraph().empty()) {
+            std::cerr << "Graph is empty, cannot find Hamiltonian cycle." << std::endl;
+            return 1;
+        }
+        // Берём первую попавшуюся ноду как стартовую
+        Node* startNode = myGraph.getGraph().begin()->first;
+        std::cout << "Starting search for Hamiltonian cycle from node '" << startNode->getName() << "'...\n";
+        
+        // Вызываем findHamiltonianCycle
+        auto cycle = aco_solver.findHamiltonianCycle(startNode);
+        printHamiltonianCycle(cycle);
+
+    } else {
+        std::cerr << "Invalid choice. Please run the program again and select 1 or 2." << std::endl;
+        return 1;
     }
 
     return 0;
