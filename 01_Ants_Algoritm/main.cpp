@@ -2,12 +2,14 @@
 #include "../My_graph/Node.h"
 #include "../My_graph/Edge.h"
 #include "AntAlgoritms.h"
+
 #include <fstream>
 #include <sstream>
 #include <string>
 #include <vector>
 #include <iostream>
 #include <limits>
+#include <cstdlib>
 
 Graph<AntEdge> makeGraph(const std::string& file_name){
     Graph<AntEdge> graph;
@@ -77,6 +79,21 @@ void printHamiltonianCycle(const std::pair<double, std::vector<AntEdge*>>& resul
     std::cout << "------------------------\n";
 }
 
+void writeHistoryToFile(const std::vector<double>& history, const std::string& filename) {
+    std::ofstream outFile(filename);
+    if (!outFile.is_open()) {
+        std::cerr << "Error: Could not open file " << filename << " for writing." << std::endl;
+        return;
+    }
+
+    outFile << "# Iteration  Total_Pheromone\n";
+    for (size_t i = 0; i < history.size(); ++i) {
+        outFile << i + 1 << " " << history[i] << "\n";
+    }
+
+    outFile.close();
+    std::cout << "\nPheromone history has been written to " << filename << std::endl;
+}
 
 int main(int argc, char* argv[]){
     if (argc < 2) {
@@ -140,5 +157,10 @@ int main(int argc, char* argv[]){
         return 1;
     }
 
+    writeHistoryToFile(aco_solver.getPheromoneHistory(), "output.txt");
+
     return 0;
 }
+
+//ИСПРАВИТЬ ЗАПИСЬ В ФАЙЛ
+//Прописать py файл

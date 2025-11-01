@@ -20,7 +20,9 @@ public:
   void addEdge(const std::string& beginName, const std::string& endName, Args... args);
   //Args... используется что бы можно было передавать n количество параметров
   //В зависимости от объекта ребра которое выбранно
-  void removeNode(const std::string& name);
+
+//  void removeNode(const std::string& name);
+
   void removeEdge(const std::string& beginName, const std::string& endName);
   const std::vector<EdgeType>& getNeighbors(Node* node) const;
   const std::map<Node*, std::vector<EdgeType>>& getGraph() const;
@@ -49,18 +51,18 @@ void Graph<EdgeType>::addEdgeOne(const std::string& beginName, const std::string
   graph[beginNode].emplace_back(beginNode, endNode, args...);
 }
 
-template<typename EdgeType>
-void Graph<EdgeType>::removeNode(const std::string& name){
-  Node* node = findNode(name);
-  if (!node) return;
-  std::vector<Node*> neighbours = getNeighbors(node);
-  for (int i = 0; i < neighbours.size(); i++) {
-      removeEdge(node->getName(), neighbours[i]->getName());
-      removeEdge(neighbours[i]->getName(), node->getName());
-  }
-  graph.erase(node);
-  nodes.erase(node);
-}
+// template<typename EdgeType>
+// void Graph<EdgeType>::removeNode(const std::string& name){
+//  Node* node = findNode(name);
+//  if (!node) return;
+//  std::vector<Node*> neighbours = getNeighbors(node);
+//  for (int i = 0; i < neighbours.size(); i++) {
+//      removeEdge(node->getName(), neighbours[i]->getName());
+//      removeEdge(neighbours[i]->getName(), node->getName());
+// }
+//  graph.erase(node);
+//  nodes.erase(node);
+// }
 
 template<typename EdgeType>
 void Graph<EdgeType>::removeEdge(const std::string& beginName, const std::string& endName){

@@ -4,10 +4,10 @@
 #include <random>
 #include <math.h>
 
-double alpha = 1.0;
-double beta = 1.0;
-double evaporationRate = 0.5;
-double pheromoneDeposit = 1.0;
+double alpha = 1.0; // Важность феромона
+double beta = 1.0; //Важность эвр информации
+double evaporationRate = 0.5; //Скорость испарения феромона
+double pheromoneDeposit = 1.0; //Кол-во феромонов 
 
 Ant :: Ant() : currentNode(nullptr), pathLength(0.0) {}
 
@@ -144,10 +144,12 @@ AntColonyOptimization::AntColonyOptimization(Graph <AntEdge>& g, int numAnts, in
 std::pair<double, std::vector<Node*>> AntColonyOptimization::findShortestPath(Node* startNode, Node* endNode) {
     double bestPathLength = -1.0;
     std::vector<Node*> bestPath;
+    pheromoneHistory.clear();
 
     for (int i = 0; i < iterations; ++i) {
         runIteration(startNode, endNode);
         updatePheromones(endNode);
+        recordPheromoneState();
 
         for (const auto& ant : ants) {
             if (ant.getCurrentNode() == endNode) {
@@ -164,6 +166,21 @@ std::pair<double, std::vector<Node*>> AntColonyOptimization::findShortestPath(No
         }
     }
     return {bestPathLength, bestPath};
+}
+
+void AntColonyOptimization::recordPheromoneState() {
+    double totalPheromone = 0.0;
+    for (const auto& pair : graph.getGraph()) {
+        for (const AntEdge& edge : pair.second) {
+            totalPheromone += edge.getPheromone();
+        }
+    }
+    pheromoneHistory.push_back(totalPheromone / 2.0);
+}
+
+// Измененный метод для получения истории
+const std::vector<double>& AntColonyOptimization::getPheromoneHistory() const {
+    return pheromoneHistory;
 }
 
 std::pair<double, std::vector<AntEdge*>> AntColonyOptimization::findHamiltonianCycle(Node* startNode) {
@@ -211,7 +228,6 @@ std::pair<double, std::vector<AntEdge*>> AntColonyOptimization::findHamiltonianC
             }
         }
         // Обновление феромонов для гамильтонова цикла
-        // (логика может отличаться от простого поиска пути)
         for (auto& pair : graph.getGraphNonConst()) {
             for (auto& edge : pair.second) {
                 double currentpheromone = edge.getPheromone();
