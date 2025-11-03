@@ -79,16 +79,30 @@ void printHamiltonianCycle(const std::pair<double, std::vector<AntEdge*>>& resul
     std::cout << "------------------------\n";
 }
 
-void writeHistoryToFile(const std::vector<double>& history, const std::string& filename) {
+void writeHistoryToFile(const std::vector<double>& pheromoneHistory,
+                        const std::vector<double>& bestPathPheromoneHistory, 
+                        const std::vector<double>& bestPathLengthHistory,
+                        const std::vector<double>& currentPathLengthHistory, 
+                        const std::string& filename) {
     std::ofstream outFile(filename);
     if (!outFile.is_open()) {
         std::cerr << "Error: Could not open file " << filename << " for writing." << std::endl;
         return;
     }
 
-    outFile << "# Iteration  Total_Pheromone\n";
-    for (size_t i = 0; i < history.size(); ++i) {
-        outFile << i + 1 << " " << history[i] << "\n";
+    outFile << "# Iteration  Total_Pheromone  Best_Path_Pheromone  Best_Path_Length  Current_Path_Length\n";
+    for (size_t i = 0; i < pheromoneHistory.size(); ++i) {
+        outFile << i + 1 << " " << pheromoneHistory[i];
+        if (i < bestPathPheromoneHistory.size()) {
+            outFile << " " << bestPathPheromoneHistory[i];
+        }
+        if (i < bestPathLengthHistory.size()) {
+            outFile << " " << bestPathLengthHistory[i];
+        }
+        if (i < currentPathLengthHistory.size()) {
+            outFile << " " << currentPathLengthHistory[i];
+        }
+        outFile << "\n";
     }
 
     outFile.close();
@@ -119,7 +133,7 @@ int main(int argc, char* argv[]){
     std::cin >> choice;
 
     // Используем правильный конструктор
-    AntColonyOptimization aco_solver(myGraph, 100, 100);
+    AntColonyOptimization aco_solver(myGraph, 20, 1000);
 
     if (choice == 1) {
         std::string startName, endName;
@@ -144,11 +158,9 @@ int main(int argc, char* argv[]){
             std::cerr << "Graph is empty, cannot find Hamiltonian cycle." << std::endl;
             return 1;
         }
-        // Берём первую попавшуюся ноду как стартовую
         Node* startNode = myGraph.getGraph().begin()->first;
         std::cout << "Starting search for Hamiltonian cycle from node '" << startNode->getName() << "'...\n";
         
-        // Вызываем findHamiltonianCycle
         auto cycle = aco_solver.findHamiltonianCycle(startNode);
         printHamiltonianCycle(cycle);
 
@@ -157,10 +169,11 @@ int main(int argc, char* argv[]){
         return 1;
     }
 
-    writeHistoryToFile(aco_solver.getPheromoneHistory(), "output.txt");
+    writeHistoryToFile(aco_solver.getPheromoneHistory(),
+                       aco_solver.getBestPathPheromoneHistory(), 
+                       aco_solver.getBestPathLengthHistory(),
+                       aco_solver.getCurrentPathLengthHistory(), 
+                       "output.txt");
 
     return 0;
 }
-
-//ИСПРАВИТЬ ЗАПИСЬ В ФАЙЛ
-//Прописать py файл

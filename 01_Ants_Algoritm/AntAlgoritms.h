@@ -36,16 +36,27 @@ class AntColonyOptimization{
   Graph<AntEdge>& graph;
   std::vector<Ant> ants;
   int iterations;
+  int stagnation_limit;
   std::vector<double> pheromoneHistory;
+  std::vector<double> bestPathPheromoneHistory;
+  std::vector<double> bestPathLengthHistory;
+  std::vector<double> currentPathLengthHistory;
   
   void runIteration(Node* startNode, Node* endNode);
   void updatePheromones(Node* endNode);
   void resetAnts(Node* startNode);
   void recordPheromoneState();
+  void recordBestPathPheromone(const std::vector<Node*>& path);
+  void recordBestPathPheromone(const std::vector<AntEdge*>& path);
+  void recordBestPathLength(double bestLength);
+  void recordCurrentPathLength(double currentLength);
 
 public:
-  AntColonyOptimization(Graph<AntEdge>& g, int numAnts = 100, int iterations = 100);
+  AntColonyOptimization(Graph<AntEdge>& g, int numAnts = 20, int iterations = 1000, int stagnation = 100);
   const std::vector<double>& getPheromoneHistory() const;
+  const std::vector<double>& getBestPathPheromoneHistory() const;
+  const std::vector<double>& getBestPathLengthHistory() const;
+  const std::vector<double>& getCurrentPathLengthHistory() const;
 
   std::pair<double, std::vector<Node*>> findShortestPath(Node* startNode, Node* endNode); 
   //Для поиска кратчайшего пути

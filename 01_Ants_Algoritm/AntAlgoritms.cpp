@@ -3,11 +3,12 @@
 #include "../My_graph/Node.h"
 #include <random>
 #include <math.h>
+#include <iostream>
 
 double alpha = 1.0; // Важность феромона
 double beta = 1.0; //Важность эвр информации
-double evaporationRate = 0.5; //Скорость испарения феромона
-double pheromoneDeposit = 1.0; //Кол-во феромонов 
+double evaporationRate = 0.1; //Скорость испарения феромона
+double pheromoneDeposit = 100.0; //Кол-во феромонов 
 
 Ant :: Ant() : currentNode(nullptr), pathLength(0.0) {}
 
@@ -137,7 +138,7 @@ void AntColonyOptimization::updatePheromones(Node* endNode) {
         }
     }
 }
-AntColonyOptimization::AntColonyOptimization(Graph <AntEdge>& g, int numAnts, int iterations): graph(g), iterations(iterations) {
+AntColonyOptimization::AntColonyOptimization(Graph <AntEdge>& g, int numAnts, int iterations, int stagnation): graph(g), iterations(iterations), stagnation_limit(stagnation) {
   ants.resize(numAnts);
 };
 
@@ -145,15 +146,24 @@ std::pair<double, std::vector<Node*>> AntColonyOptimization::findShortestPath(No
     double bestPathLength = -1.0;
     std::vector<Node*> bestPath;
     pheromoneHistory.clear();
+    bestPathPheromoneHistory.clear();
+    bestPathLengthHistory.clear();
+    currentPathLengthHistory.clear();
+    int no_change_counter = 0;
+    double previousBestLength = -1.0;
 
     for (int i = 0; i < iterations; ++i) {
         runIteration(startNode, endNode);
         updatePheromones(endNode);
         recordPheromoneState();
 
+        double currentIterationBest = -1.0;
         for (const auto& ant : ants) {
             if (ant.getCurrentNode() == endNode) {
                 double currentPathLength = ant.getPathLength();
+                if (currentIterationBest < 0 || currentPathLength < currentIterationBest) {
+                    currentIterationBest = currentPathLength;
+                }
                 if (bestPathLength < 0 || currentPathLength < bestPathLength) {
                     bestPathLength = currentPathLength;
                     bestPath.clear();
@@ -164,6 +174,26 @@ std::pair<double, std::vector<Node*>> AntColonyOptimization::findShortestPath(No
                 }
             }
         }
+        
+        // Проверка на застой: если лучший путь не улучшился
+        if (i > 0 && previousBestLength > 0) {
+            if (std::abs(bestPathLength - previousBestLength) < 1e-9) {
+                no_change_counter++;
+            } else {
+                no_change_counter = 0;
+            }
+        }
+        previousBestLength = bestPathLength;
+
+        if (no_change_counter >= stagnation_limit) {
+            std::cout << "\nAlgorithm stopped: best path hasn't improved for " << stagnation_limit << " iterations (stopped at iteration " << i + 1 << ")." << std::endl;
+            break;
+        }
+        
+        // Записываем глобально лучший результат и текущий результат итерации
+        recordBestPathLength(bestPathLength);
+        recordCurrentPathLength(currentIterationBest > 0 ? currentIterationBest : bestPathLength);
+        recordBestPathPheromone(bestPath);
     }
     return {bestPathLength, bestPath};
 }
@@ -183,12 +213,68 @@ const std::vector<double>& AntColonyOptimization::getPheromoneHistory() const {
     return pheromoneHistory;
 }
 
+void AntColonyOptimization::recordBestPathLength(double bestLength) {
+    bestPathLengthHistory.push_back(bestLength);
+}
+
+const std::vector<double>& AntColonyOptimization::getBestPathLengthHistory() const {
+    return bestPathLengthHistory;
+}
+
+void AntColonyOptimization::recordCurrentPathLength(double currentLength) {
+    currentPathLengthHistory.push_back(currentLength);
+}
+
+const std::vector<double>& AntColonyOptimization::getCurrentPathLengthHistory() const {
+    return currentPathLengthHistory;
+}
+
+// Для записи феромонов на лучшем пути (версия для Node*)
+void AntColonyOptimization::recordBestPathPheromone(const std::vector<Node*>& path) {
+    if (path.size() < 2) {
+        bestPathPheromoneHistory.push_back(0.0);
+        return;
+    }
+    
+    double totalPheromone = 0.0;
+    for (size_t i = 0; i < path.size() - 1; ++i) {
+        AntEdge* edge = graph.findEdge(path[i], path[i + 1]);
+        if (edge) {
+            totalPheromone += edge->getPheromone();
+        }
+    }
+    bestPathPheromoneHistory.push_back(totalPheromone);
+}
+
+// Для записи феромонов на лучшем пути (версия для AntEdge*)
+void AntColonyOptimization::recordBestPathPheromone(const std::vector<AntEdge*>& path) {
+    double totalPheromone = 0.0;
+    for (AntEdge* edge : path) {
+        if (edge) {
+            totalPheromone += edge->getPheromone();
+        }
+    }
+    bestPathPheromoneHistory.push_back(totalPheromone);
+}
+
+const std::vector<double>& AntColonyOptimization::getBestPathPheromoneHistory() const {
+    return bestPathPheromoneHistory;
+}
+
 std::pair<double, std::vector<AntEdge*>> AntColonyOptimization::findHamiltonianCycle(Node* startNode) {
     double bestCycleLength = -1.0;
     std::vector<AntEdge*> bestCycle;
+    pheromoneHistory.clear();
+    bestPathPheromoneHistory.clear();
+    bestPathLengthHistory.clear();
+    currentPathLengthHistory.clear();
+    int no_change_counter = 0;
+    double previousBestLength = -1.0;
 
     for (int i = 0; i < iterations; ++i) {
         resetAnts(startNode);
+        double currentIterationBest = -1.0;
+        
         for (auto& ant : ants) {
             while (true) {
                 Node* currnode = ant.getCurrentNode();
@@ -220,13 +306,23 @@ std::pair<double, std::vector<AntEdge*>> AntColonyOptimization::findHamiltonianC
                 AntEdge* closingEdge = graph.findEdge(lastNode, startNode);
                 if (closingEdge) {
                     ant.visitNode(closingEdge); // Замыкаем цикл
-                    if (bestCycleLength < 0 || ant.getPathLength() < bestCycleLength) {
-                        bestCycleLength = ant.getPathLength();
+                    double cycleLength = ant.getPathLength();
+                    if (currentIterationBest < 0 || cycleLength < currentIterationBest) {
+                        currentIterationBest = cycleLength;
+                    }
+                    if (bestCycleLength < 0 || cycleLength < bestCycleLength) {
+                        bestCycleLength = cycleLength;
                         bestCycle = ant.getPath();
                     }
                 }
             }
         }
+        
+        // Записываем глобально лучший результат и текущий результат итерации
+        recordBestPathLength(bestCycleLength);
+        recordCurrentPathLength(currentIterationBest > 0 ? currentIterationBest : bestCycleLength);
+        recordBestPathPheromone(bestCycle);
+        
         // Обновление феромонов для гамильтонова цикла
         for (auto& pair : graph.getGraphNonConst()) {
             for (auto& edge : pair.second) {
@@ -246,6 +342,22 @@ std::pair<double, std::vector<AntEdge*>> AntColonyOptimization::findHamiltonianC
                     }
                 }
             }
+        }
+        recordPheromoneState();
+        
+        // Проверка на застой: если лучший путь не улучшился
+        if (i > 0 && previousBestLength > 0) {
+            if (std::abs(bestCycleLength - previousBestLength) < 1e-9) {
+                no_change_counter++;
+            } else {
+                no_change_counter = 0;
+            }
+        }
+        previousBestLength = bestCycleLength;
+
+        if (no_change_counter >= stagnation_limit) {
+            std::cout << "\nAlgorithm stopped: best path hasn't improved for " << stagnation_limit << " iterations (stopped at iteration " << i + 1 << ")." << std::endl;
+            break;
         }
     }
 
