@@ -61,9 +61,12 @@ def process_image(file_name):
     gray_image = cv2.cvtColor(temp_image, cv2.COLOR_BGR2GRAY)
     # Препятствия - черные, путь - белый. THRESH_BINARY_INV инвертирует это.
     # Порог 200 хорошо отделяет черные здания от светло-серого фона карты.
-    _, binary_image = cv2.threshold(gray_image, 200, 255, cv2.THRESH_BINARY_INV)
+    _, binary_image = cv2.threshold(gray_image, 200, 1, cv2.THRESH_BINARY)
+    
+    grid = 1 - binary_image
     
     # Преобразуем в сетку: 1 - препятствие, 0 - свободно
-    grid = (binary_image == 255).astype(int)
+    debug_vis = binary_image.copy() * 255
+    cv2.imwrite('debug_binary_grid.png', binary_image) 
 
     return grid, start_coords, end_coords

@@ -7,7 +7,7 @@ class Lian:
         self.grid = grid
         self.height, self.width = grid.shape
         self.delta = delta
-        self.alpha_max = math.radians(alpha_max) # Конвертируем в радианы
+        self.alpha_max = math.radians(alpha_max)
 
     def _is_obstacle(self, x, y):
         """Проверяет, является ли ячейка препятствием."""
@@ -17,30 +17,21 @@ class Lian:
         return True
 
     def _get_circle_successors(self, node):
-        """Генерирует точки на окружности радиуса Delta."""
+        """Генерирует все точки на окружности радиуса Delta."""
         x_center, y_center = node
         successors = set()
-        x = self.delta
-        y = 0
-        p = 1 - self.delta
         
-        while x >= y:
-            points = [
-                (x_center + x, y_center + y), (x_center - x, y_center + y),
-                (x_center + x, y_center - y), (x_center - x, y_center - y),
-                (x_center + y, y_center + x), (x_center - y, y_center + x),
-                (x_center + y, y_center - x), (x_center - y, y_center - x),
-            ]
-            for p_ in points:
-                if 0 <= p_[0] < self.width and 0 <= p_[1] < self.height:
-                    successors.add((int(p_[0]), int(p_[1])))
-            
-            y += 1
-            if p <= 0:
-                p = p + 2 * y + 1
-            else:
-                x -= 1
-                p = p + 2 * y - 2 * x + 1
+        # Генерируем все точки на окружности, проверяя каждую точку в квадрате
+        for dx in range(-self.delta, self.delta + 1):
+            for dy in range(-self.delta, self.delta + 1):
+                # Проверяем, что точка лежит на окружности (с небольшой погрешностью)
+                dist = math.sqrt(dx**2 + dy**2)
+                if abs(dist - self.delta) < 0.5:  # Допуск для целочисленных координат
+                    x, y = x_center + dx, y_center + dy
+                    # Проверяем границы сетки
+                    if 0 <= x < self.width and 0 <= y < self.height:
+                        successors.add((int(x), int(y)))
+        
         return list(successors)
 
     def _heuristic(self, a, b):
