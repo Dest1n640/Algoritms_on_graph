@@ -7,7 +7,7 @@
 
 double alpha = 1.0; // Важность феромона
 double beta = 1.0; //Важность эвр информации
-double evaporationRate = 0.1; //Скорость испарения феромона
+double evaporationRate = 0.05; //Скорость испарения феромона
 double pheromoneDeposit = 100.0; //Кол-во феромонов 
 
 Ant :: Ant() : currentNode(nullptr), pathLength(0.0) {}

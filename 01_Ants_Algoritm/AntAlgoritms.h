@@ -52,7 +52,7 @@ class AntColonyOptimization{
   void recordCurrentPathLength(double currentLength);
 
 public:
-  AntColonyOptimization(Graph<AntEdge>& g, int numAnts = 20, int iterations = 1000, int stagnation = 100);
+  AntColonyOptimization(Graph<AntEdge>& g, int numAnts = 50, int iterations = 1000, int stagnation = 125);
   const std::vector<double>& getPheromoneHistory() const;
   const std::vector<double>& getBestPathPheromoneHistory() const;
   const std::vector<double>& getBestPathLengthHistory() const;

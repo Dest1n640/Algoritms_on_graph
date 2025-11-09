@@ -133,7 +133,7 @@ int main(int argc, char* argv[]){
     std::cin >> choice;
 
     // Используем правильный конструктор
-    AntColonyOptimization aco_solver(myGraph, 20, 1000);
+    AntColonyOptimization aco_solver(myGraph);
 
     if (choice == 1) {
         std::string startName, endName;
