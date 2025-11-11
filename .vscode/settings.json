@@ -4,6 +4,7 @@
     "algorithm": "cpp",
     "vector": "cpp",
     "map": "cpp",
-    "utility": "cpp"
+    "utility": "cpp",
+    "random": "cpp"
   }
 }

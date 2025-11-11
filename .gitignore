@@ -1,0 +1,40 @@
+# Build artifacts
+**/build/
+**/*.o
+**/*.exe
+**/*.out
+**/*.a
+**/*.so
+**/*.dylib
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+dist/
+*.egg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Debug files
+debug_*.png
+debug_*.txt
+
+# Output files
+output.txt
+result_*.png
