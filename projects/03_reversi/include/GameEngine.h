@@ -31,6 +31,8 @@ private:
 
 public:
   GameEngine();
+  GameEngine(const GameEngine& other); // Copy constructor
+  ~GameEngine(); // Destructor
   bool make_move(Cell coord);
   void switch_player();
   bool has_valid_moves(Player player);

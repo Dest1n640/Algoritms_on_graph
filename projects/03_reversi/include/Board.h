@@ -15,11 +15,11 @@ struct Cell
 
 class Board{
   std::vector<std::vector<Cell*>> board;
-  Cell start_black_coord1{"d", 5, 1}; Cell start_black_coord2{"e", 4, 1};
-  Cell start_white_coord1{"d", 4, 1}; Cell start_white_coord2{"e", 5, 1};
   
 public:
   Board();
+  Board(const Board& other); // Copy constructor
+  ~Board(); // Destructor
   
   int get_value(int y, int x) const;
   void set_value(int y, int x, int value);

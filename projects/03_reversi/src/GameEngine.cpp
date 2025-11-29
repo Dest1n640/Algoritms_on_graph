@@ -6,11 +6,26 @@
 bool GameEngine::make_move(Cell coord){
   int y = coord.y;
   int x = coord.x;
+  
+  if (!board->is_valid_coord(y, x) || !board->is_cell_empty(y, x)) {
+    return false;
+  }
+
   Player my_player = get_current_player();
-  board -> set_value(y, x, static_cast<int>(my_player));
-  if (board -> get_value(y, x) != 0)
-    return true;
-  return false;
+  std::vector<Cell> flipped = get_flipped_cells(coord, my_player);
+  
+  if (flipped.empty()) {
+    return false;
+  }
+
+  board->set_value(y, x, static_cast<int>(my_player));
+  
+  for (const auto& cell : flipped) {
+    board->set_value(cell.y, cell.x, static_cast<int>(my_player));
+  }
+  
+  update_scores();
+  return true;
 }
 
 std::vector<Cell> GameEngine::get_flipped_cells(Cell coord, Player player){
@@ -139,6 +154,17 @@ GameEngine::GameEngine() {
   white_score = 2;
 }
 
+GameEngine::GameEngine(const GameEngine& other) {
+  board = new Board(*other.board); // Deep copy of board
+  current_player = other.current_player;
+  black_score = other.black_score;
+  white_score = other.white_score;
+}
+
+GameEngine::~GameEngine() {
+  delete board;
+}
+
 void GameEngine::switch_player(){
   if (current_player == Player::BLACK) {
     current_player = Player::WHITE;
@@ -214,4 +240,8 @@ std::string GameEngine::board_to_string() const{
   }
   
   return result;
+}
+
+const Board& GameEngine::get_board() const{
+  return *board;
 }
