@@ -34,6 +34,7 @@ public:
   int count_cells(int value) const;
   
   void print() const;
+  void print_with_moves(const std::vector<Cell>& valid_moves) const;
 };
 
 #endif

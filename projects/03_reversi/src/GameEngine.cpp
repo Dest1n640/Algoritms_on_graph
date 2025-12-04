@@ -28,7 +28,7 @@ bool GameEngine::make_move(Cell coord){
   return true;
 }
 
-std::vector<Cell> GameEngine::get_flipped_cells(Cell coord, Player player){
+std::vector<Cell> GameEngine::get_flipped_cells(Cell coord, Player player) const{
   std::vector<Cell> flipped_cells;
   int y = coord.y;
   int x = coord.x;
@@ -111,7 +111,7 @@ bool GameEngine::is_valid_direction(int y, int x, int dy, int dx, Player player,
   return false;
 }
 
-std::vector<Cell> GameEngine::get_valid_moves(Player player){
+std::vector<Cell> GameEngine::get_valid_moves(Player player) const{
   std::vector<Cell> valid_moves;
   
   for(int i = 0; i < board->get_board_size(); i++){
@@ -215,6 +215,11 @@ int GameEngine::get_white_score() const{
 
 void GameEngine::display_board() const{
   board->print();
+}
+
+void GameEngine::display_board_with_moves() const{
+  std::vector<Cell> moves = get_valid_moves(current_player);
+  board->print_with_moves(moves);
 }
 
 

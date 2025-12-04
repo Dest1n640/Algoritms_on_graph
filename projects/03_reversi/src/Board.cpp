@@ -96,19 +96,53 @@ int Board::count_cells(int value) const{
 }
 
 void Board::print() const{
-  std::string line = "-----------------";
-  std::cout << "  0 1 2 3 4 5 6 7" << std::endl;
-  std::cout << line << std::endl;
+  std::cout << "\n  a b c d e f g h" << std::endl;
+  
   for (size_t i = 0; i < board.size(); i++){
-    std::cout << i << "|";
+    std::cout << (i + 1) << " ";
+    
     for (size_t j = 0; j < board.size(); j++){
       int val = board[i][j]->value;
       if (val == 0) std::cout << ".";
-      else if (val == 1) std::cout << "B";
-      else if (val == -1) std::cout << "W";
-      std::cout << "|";
+      else if (val == 1) std::cout << "B";  // Black
+      else if (val == -1) std::cout << "W";  // White
+      
+      if (j < board.size() - 1) std::cout << " ";
     }
     std::cout << std::endl;
-    std::cout << line << std::endl;
+  }
+}
+
+void Board::print_with_moves(const std::vector<Cell>& valid_moves) const{
+  std::cout << "\n  a b c d e f g h" << std::endl;
+  
+  for (size_t i = 0; i < board.size(); i++){
+    std::cout << (i + 1) << " ";
+    
+    for (size_t j = 0; j < board.size(); j++){
+      int val = board[i][j]->value;
+      
+      // Check if this position is a valid move
+      bool is_valid_move = false;
+      for (const auto& move : valid_moves) {
+        if (move.y == (int)i && move.x == (int)j) {
+          is_valid_move = true;
+          break;
+        }
+      }
+      
+      if (is_valid_move) {
+        std::cout << "*";  // Mark valid moves
+      } else if (val == 0) {
+        std::cout << ".";
+      } else if (val == 1) {
+        std::cout << "B";  // Black
+      } else if (val == -1) {
+        std::cout << "W";  // White
+      }
+      
+      if (j < board.size() - 1) std::cout << " ";
+    }
+    std::cout << std::endl;
   }
 }
