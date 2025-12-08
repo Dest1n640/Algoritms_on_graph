@@ -1,7 +1,25 @@
 #include "../include/GameEngine.h"
-#include "../include/Board.h"
-#include <vector>
-#include <string>
+#include "../include/Player.h"
+#include "../include/Display.h"
+#include <iostream>
+
+GameEngine::GameEngine() {
+  board = new Board();
+  current_player = PlayerColor::BLACK; 
+  black_score = 2;
+  white_score = 2;
+}
+
+GameEngine::GameEngine(const GameEngine& other) {
+  board = new Board(*other.board);
+  current_player = other.current_player;
+  black_score = other.black_score;
+  white_score = other.white_score;
+}
+
+GameEngine::~GameEngine() {
+  delete board;
+}
 
 bool GameEngine::make_move(Cell coord){
   int y = coord.y;
@@ -11,7 +29,7 @@ bool GameEngine::make_move(Cell coord){
     return false;
   }
 
-  Player my_player = get_current_player();
+  PlayerColor my_player = get_current_player();
   std::vector<Cell> flipped = get_flipped_cells(coord, my_player);
   
   if (flipped.empty()) {
@@ -28,32 +46,23 @@ bool GameEngine::make_move(Cell coord){
   return true;
 }
 
-std::vector<Cell> GameEngine::get_flipped_cells(Cell coord, Player player) const{
+std::vector<Cell> GameEngine::get_flipped_cells(Cell coord, PlayerColor player) const{
   std::vector<Cell> flipped_cells;
   int y = coord.y;
   int x = coord.x;
   
-  // Проверяем, что клетка пустая
   if (board->get_value(y, x) != 0) {
     return flipped_cells;
   }
   
-  // 8 направлений: вверх, вниз, влево, вправо и 4 диагонали
   int directions[8][2] = {
-    {-1, 0},  // вверх
-    {1, 0},   // вниз
-    {0, -1},  // влево
-    {0, 1},   // вправо
-    {-1, -1}, // вверх-влево
-    {-1, 1},  // вверх-вправо
-    {1, -1},  // вниз-влево
-    {1, 1}    // вниз-вправо
+    {-1, 0}, {1, 0}, {0, -1}, {0, 1},
+    {-1, -1}, {-1, 1}, {1, -1}, {1, 1}
   };
   
   int player_value = static_cast<int>(player);
-  int opponent_value = (player == Player::BLACK) ? static_cast<int>(Player::WHITE) : static_cast<int>(Player::BLACK);
+  int opponent_value = (player == PlayerColor::BLACK) ? static_cast<int>(PlayerColor::WHITE) : static_cast<int>(PlayerColor::BLACK);
   
-  // Проверяем каждое направление
   for (int dir = 0; dir < 8; dir++) {
     std::vector<Cell> temp_flipped;
     int dy = directions[dir][0];
@@ -61,7 +70,6 @@ std::vector<Cell> GameEngine::get_flipped_cells(Cell coord, Player player) const
     int curr_y = y + dy;
     int curr_x = x + dx;
     
-    // Идем в направлении, пока находим фишки противника
     while (board->is_valid_coord(curr_y, curr_x) && 
            board->get_value(curr_y, curr_x) == opponent_value) {
       temp_flipped.push_back(Cell(curr_y, curr_x, opponent_value));
@@ -69,7 +77,6 @@ std::vector<Cell> GameEngine::get_flipped_cells(Cell coord, Player player) const
       curr_x += dx;
     }
     
-    // Если нашли свою фишку после фишек противника, добавляем их в результат
     if (board->is_valid_coord(curr_y, curr_x) && 
         board->get_value(curr_y, curr_x) == player_value && 
         !temp_flipped.empty()) {
@@ -80,17 +87,15 @@ std::vector<Cell> GameEngine::get_flipped_cells(Cell coord, Player player) const
   return flipped_cells;
 }
 
-bool GameEngine::is_valid_direction(int y, int x, int dy, int dx, Player player, std::vector<Cell>& to_flip){
+bool GameEngine::is_valid_direction(int y, int x, int dy, int dx, PlayerColor player, std::vector<Cell>& to_flip){
   int player_value = static_cast<int>(player);
-  int opponent_value = (player == Player::BLACK) ? static_cast<int>(Player::WHITE) : static_cast<int>(Player::BLACK);
+  int opponent_value = (player == PlayerColor::BLACK) ? static_cast<int>(PlayerColor::WHITE) : static_cast<int>(PlayerColor::BLACK);
   
   int curr_y = y + dy;
   int curr_x = x + dx;
   
-  // Временный вектор для хранения фишек, которые можно перевернуть
   std::vector<Cell> temp_flip;
   
-  // Идем в направлении, пока находим фишки противника
   while (board->is_valid_coord(curr_y, curr_x) && 
          board->get_value(curr_y, curr_x) == opponent_value) {
     temp_flip.push_back(Cell(curr_y, curr_x, opponent_value));
@@ -98,12 +103,9 @@ bool GameEngine::is_valid_direction(int y, int x, int dy, int dx, Player player,
     curr_x += dx;
   }
   
-  // Проверяем, что нашли хотя бы одну фишку противника
-  // и в конце стоит наша фишка
   if (!temp_flip.empty() && 
       board->is_valid_coord(curr_y, curr_x) && 
       board->get_value(curr_y, curr_x) == player_value) {
-    // Направление валидно, копируем фишки в выходной вектор
     to_flip.insert(to_flip.end(), temp_flip.begin(), temp_flip.end());
     return true;
   }
@@ -111,18 +113,15 @@ bool GameEngine::is_valid_direction(int y, int x, int dy, int dx, Player player,
   return false;
 }
 
-std::vector<Cell> GameEngine::get_valid_moves(Player player) const{
+std::vector<Cell> GameEngine::get_valid_moves(PlayerColor player) const{
   std::vector<Cell> valid_moves;
   
   for(int i = 0; i < board->get_board_size(); i++){
     for (int j = 0; j < board->get_board_size(); j++){
-      // Проверяем, что клетка пустая
       if(board->get_value(i, j) == 0) {
-        // Проверяем, можно ли сделать валидный ход в эту клетку
         Cell test_coord(i, j, 0);
         std::vector<Cell> flipped = get_flipped_cells(test_coord, player);
         
-        // Если при этом ходе переворачивается хотя бы одна фишка, ход валиден
         if(!flipped.empty()) {
           valid_moves.push_back(test_coord);
         }
@@ -146,46 +145,26 @@ void GameEngine::update_scores(){
   }
 }
 
-
-GameEngine::GameEngine() {
-  board = new Board();
-  current_player = Player::BLACK;
-  black_score = 2;
-  white_score = 2;
-}
-
-GameEngine::GameEngine(const GameEngine& other) {
-  board = new Board(*other.board); // Deep copy of board
-  current_player = other.current_player;
-  black_score = other.black_score;
-  white_score = other.white_score;
-}
-
-GameEngine::~GameEngine() {
-  delete board;
-}
-
 void GameEngine::switch_player(){
-  if (current_player == Player::BLACK) {
-    current_player = Player::WHITE;
+  if (current_player == PlayerColor::BLACK) {
+    current_player = PlayerColor::WHITE;
   } else {
-    current_player = Player::BLACK;
+    current_player = PlayerColor::BLACK;
   }
 }
 
-bool GameEngine::has_valid_moves(Player player){
+bool GameEngine::has_valid_moves(PlayerColor player) const{
   std::vector<Cell> valid_moves = get_valid_moves(player);
-  
   return !valid_moves.empty();
 }
 
-std::vector<Cell> GameEngine::get_possible_moves(){
+std::vector<Cell> GameEngine::get_possible_moves() const{
   return get_valid_moves(current_player);
 }
 
 GameStatus GameEngine::get_game_status(){
   bool game_over = board->is_full() || 
-                   (!has_valid_moves(Player::BLACK) && !has_valid_moves(Player::WHITE));
+                   (!has_valid_moves(PlayerColor::BLACK) && !has_valid_moves(PlayerColor::WHITE));
   
   if (!game_over) {
     return GameStatus::PLAYING;
@@ -194,59 +173,63 @@ GameStatus GameEngine::get_game_status(){
   update_scores();
   
   if (black_score > white_score) {
-    return GameStatus::BLACK_WON;
+    return GameStatus::BLACK_WINS;
   } else if (white_score > black_score) {
-    return GameStatus::WHITE_WON;
+    return GameStatus::WHITE_WINS;
   } else {
     return GameStatus::DRAW;
   }
 }
 
-Player GameEngine::get_current_player() const{
+PlayerColor GameEngine::get_current_player() const{
   return current_player;
 }
 
 int GameEngine::get_black_score() const{
   return black_score;
 }
+
 int GameEngine::get_white_score() const{
   return white_score;
 }
 
-void GameEngine::display_board() const{
-  board->print();
-}
-
-void GameEngine::display_board_with_moves() const{
-  std::vector<Cell> moves = get_valid_moves(current_player);
-  board->print_with_moves(moves);
-}
-
-
-std::string GameEngine::board_to_string() const{
-  std::string result = "  1 2 3 4 5 6 7 8\n";
-  
-  for (int i = 0; i < board->get_board_size(); i++) {
-    result += char('a' + i);
-    result += " ";
-    
-    for (int j = 0; j < board->get_board_size(); j++) {
-      int value = board->get_value(i, j);
-      
-      if (value == 1) {
-        result += "B ";
-      } else if (value == -1) {
-        result += "W ";
-      } else {
-        result += ". ";
-      }
-    }
-    result += "\n";
-  }
-  
-  return result;
-}
-
 const Board& GameEngine::get_board() const{
   return *board;
+}
+
+void GameEngine::run_game(Player* player1, Player* player2) {
+    int consecutive_passes = 0;
+    
+    while (get_game_status() == GameStatus::PLAYING) {
+        Display::print_board(*this, true);
+        Display::print_scores(black_score, white_score);
+        
+        Player* current = (current_player == PlayerColor::BLACK) ? player1 : player2;
+        
+        if (!has_valid_moves(current_player)) {
+            Display::print_skip_turn(current_player);
+            switch_player();
+            consecutive_passes++;
+            
+            if (consecutive_passes >= 2) {
+                break;
+            }
+            continue;
+        }
+        
+        consecutive_passes = 0;
+        
+        Cell move = current->get_move(*this);
+        
+        if (!make_move(move)) {
+            Display::print_invalid_move();
+            continue;
+        }
+        
+        Display::print_player_move(current_player, move.y, move.x);
+        switch_player();
+    }
+    
+    Display::print_board(*this, false);
+    Display::print_game_over(get_game_status(), black_score, white_score);
 }
