@@ -38,3 +38,5 @@ debug_*.txt
 # Output files
 output.txt
 result_*.png
+
+*.puml
