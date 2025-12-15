@@ -6,7 +6,7 @@ int main() {
     Display::print_welcome_message();
    
     HumanPlayer black(PlayerColor::BLACK);
-    AIPlayer white(PlayerColor::WHITE, 8);
+    AIPlayer white(PlayerColor::WHITE, 10);
     
     GameEngine engine;
     engine.run_game(&black, &white);
