@@ -5,83 +5,14 @@
 #include <random>
 #include <math.h>
 #include <iostream>
-
-double alpha = 1.0; // Важность феромона
-double beta = 1.0; //Важность эвр информации
-double evaporationRate = 0.05; //Скорость испарения феромона
-double pheromoneDeposit = 100.0; //Кол-во феромонов 
-
-Ant :: Ant() : currentNode(nullptr), pathLength(0.0) {}
-
-Node* Ant::getCurrentNode() const{
-  return currentNode;
-} 
-double Ant::getPathLength() const{
-  return pathLength;
-}
-const std::vector<AntEdge*>& Ant::getPath() const{
-  return path;
-}
+#include <fstream>
+#include <sstream>
+#include <limits>
+#include <algorithm>
 
 
-bool Ant::reached(Node* target){
-  return currentNode == target;
-}
-
-AntEdge* Ant::chooseNextNode(const std::vector<AntEdge*>& neighbors){
-  double denominator = 0.0;
-  std::vector<double> probabilities;
-  probabilities.reserve(neighbors.size());
-
-  for (const auto& edge : neighbors) {
-      double t = edge->getPheromone();
-      double n = 1.0 / edge->getWeight();
-      probabilities.push_back(std::pow(t, alpha) * std::pow(n, beta));
-      denominator += probabilities.back();
-  }
-
-  if (denominator == 0.0) {
-      return nullptr;
-  }
-
-  for (double& p : probabilities) {
-      p /= denominator;
-  }
-
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::uniform_real_distribution<> dis(0.0, 1.0);
-  double r = dis(gen);
-  double cumulative = 0;
-  for (size_t i = 0; i < probabilities.size(); i++) {
-      cumulative += probabilities[i];
-      if (r <= cumulative) {
-          return neighbors[i]; // Возвращаем указатель на оригинальное ребро
-      }
-  }
-  return neighbors.back();
-}
-
-bool Ant::is_visited(Node* nextNode){
-  return visited.count(nextNode) > 0;
-}
-
-void Ant::visitNode(AntEdge* edge){
-  path.push_back(edge);
-  visited.insert(edge->getEnd());
-  currentNode = edge->getEnd();
-  pathLength += edge->getWeight();
-}
-
-void Ant::reset(Node* startNode){
-  currentNode = startNode;
-  path.clear();
-  visited.clear();
-  if (startNode) {
-      visited.insert(startNode);
-  }
-  pathLength = 0;
-}
+AntAlgorithmException::AntAlgorithmException(const std::string& message)
+    : std::runtime_error(message) {}
 
 void AntColonyOptimization::resetAnts(Node* start){
   for(auto& ant : ants) 
@@ -131,7 +62,7 @@ void AntColonyOptimization::updatePheromones(Node* endNode) {
         const auto& path = ant.getPath();
         double pathLength = ant.getPathLength();
         if (pathLength > 0 && ant.getCurrentNode() == endNode) {
-            double deltaPheromone = pheromoneDeposit / pathLength;
+            double deltaPheromone = ant.getPheromoneDeposit() / ant.getPathLength();
             for (AntEdge* edge : path) {
                 double currentPheromone = edge->getPheromone();
                 edge->setPheromone(currentPheromone + deltaPheromone);
@@ -139,9 +70,18 @@ void AntColonyOptimization::updatePheromones(Node* endNode) {
         }
     }
 }
-AntColonyOptimization::AntColonyOptimization(Graph <AntEdge>& g, int numAnts, int iterations, int stagnation): graph(g), iterations(iterations), stagnation_limit(stagnation) {
-  ants.resize(numAnts);
-};
+
+AntColonyOptimization::AntColonyOptimization(Graph<AntEdge>& g, 
+                                             const std::string& antConfigFile,
+                                             const std::string& algConfigFile)
+    : graph(g), evaporationRate(0.0), iterations(0), stagnation_limit(0) {
+    
+    std::cout << "Initializing Ant Colony Optimization..." << std::endl;
+    
+    loadAlgorithmParameters(algConfigFile);
+    loadAntsFromConfig(antConfigFile);
+}
+
 
 std::pair<double, std::vector<Node*>> AntColonyOptimization::findShortestPath(Node* startNode, Node* endNode) {
     double bestPathLength = -1.0;
@@ -230,6 +170,16 @@ const std::vector<double>& AntColonyOptimization::getCurrentPathLengthHistory() 
     return currentPathLengthHistory;
 }
 
+double AntColonyOptimization::getEvaporationRate() const{
+  return evaporationRate;
+}
+int AntColonyOptimization::getIterations() const{
+  return iterations;
+}
+int AntColonyOptimization::getStagnationLimit() const{
+  return stagnation_limit;
+}
+
 // Для записи феромонов на лучшем пути (версия для Node*)
 void AntColonyOptimization::recordBestPathPheromone(const std::vector<Node*>& path) {
     if (path.size() < 2) {
@@ -256,6 +206,135 @@ void AntColonyOptimization::recordBestPathPheromone(const std::vector<AntEdge*>&
         }
     }
     bestPathPheromoneHistory.push_back(totalPheromone);
+}
+
+void AntColonyOptimization::validateAlgorithmParameters() const {
+    if (evaporationRate < 0.0 || evaporationRate > 1.0)
+        throw AntAlgorithmException("Invalid evaporationRate");
+    if (iterations <= 0) 
+        throw AntAlgorithmException("Invalid iterations");
+    if (stagnation_limit <= 0) 
+        throw AntAlgorithmException("Invalid stagnation_limit");
+}
+
+void AntColonyOptimization::loadAlgorithmParameters(const std::string& configFile) {
+    std::ifstream file(configFile);
+    
+    if (!file.is_open()) {
+        throw AntAlgorithmException("Could not open algorithm parameters file: " + configFile);
+    }
+    
+    bool foundEvaporation = false;
+    bool foundIterations = false;
+    bool foundStagnation = false;
+    
+    std::string line;
+    int lineNumber = 0;
+    
+    while (std::getline(file, line)) {
+        lineNumber++;
+        
+        if (line.empty() || line[0] == '#') continue;
+        
+        std::istringstream iss(line);
+        std::string paramName;
+        
+        if (iss >> paramName) {
+            if (paramName == "evaporationRate") {
+                if (!(iss >> evaporationRate)) {
+                    throw AntAlgorithmException("Invalid value for evaporationRate at line " + 
+                                               std::to_string(lineNumber) + " in " + configFile);
+                }
+                foundEvaporation = true;
+                std::cout << "Loaded evaporationRate: " << evaporationRate << std::endl;
+            }
+            else if (paramName == "iterations") {
+                if (!(iss >> iterations)) {
+                    throw AntAlgorithmException("Invalid value for iterations at line " + 
+                                               std::to_string(lineNumber) + " in " + configFile);
+                }
+                foundIterations = true;
+                std::cout << "Loaded iterations: " << iterations << std::endl;
+            }
+            else if (paramName == "stagnation_limit") {
+                if (!(iss >> stagnation_limit)) {
+                    throw AntAlgorithmException("Invalid value for stagnation_limit at line " + 
+                                               std::to_string(lineNumber) + " in " + configFile);
+                }
+                foundStagnation = true;
+                std::cout << "Loaded stagnation_limit: " << stagnation_limit << std::endl;
+            }
+        }
+    }
+    
+    file.close();
+    
+    if (!foundEvaporation) {
+        throw AntAlgorithmException("Missing parameter 'evaporationRate' in " + configFile);
+    }
+    if (!foundIterations) {
+        throw AntAlgorithmException("Missing parameter 'iterations' in " + configFile);
+    }
+    if (!foundStagnation) {
+        throw AntAlgorithmException("Missing parameter 'stagnation_limit' in " + configFile);
+    }
+    
+    validateAlgorithmParameters();
+}
+
+void AntColonyOptimization::loadAntsFromConfig(const std::string& configFile) {
+    std::ifstream file(configFile);
+
+    if (!file.is_open()) {
+        throw AntAlgorithmException("Could not open ants configuration file: " + configFile);
+    }
+    
+    std::string line;
+    int lineNumber = 0;
+    int totalAnts = 0;
+    
+    while (std::getline(file, line)) {
+        lineNumber++;
+        
+        // Пропускаем пустые строки и комментарии
+        if (line.empty() || line[0] == '#') continue;
+        
+        std::istringstream iss(line);
+        std::string typeName;
+        double alpha, beta, pheromoneDeposit;
+        int count;
+        
+        if (!(iss >> typeName >> alpha >> beta >> pheromoneDeposit >> count)) {
+            throw AntAlgorithmException("Invalid format at line " + 
+                                       std::to_string(lineNumber) + " in " + configFile);
+        }
+        
+        if (count <= 0) {
+            throw AntAlgorithmException("Invalid count at line " + 
+                                       std::to_string(lineNumber) + " in " + configFile); 
+        }
+
+        try {
+            std::cout << "Creating " << count << " ants of type '" << typeName 
+                      << "' (alpha=" << alpha << ", beta=" << beta 
+                      << ", pheromone=" << pheromoneDeposit << ")" << std::endl;
+            
+            for (int i = 0; i < count; ++i) {
+                ants.emplace_back(alpha, beta, pheromoneDeposit, typeName);
+            }
+            totalAnts += count;
+        } catch (const AntAlgorithmException& e) {
+            throw AntAlgorithmException("Error creating ants at line " + 
+                                       std::to_string(lineNumber) + ": " + e.what());
+        }
+    }
+    
+    file.close();
+    
+    if (totalAnts == 0) {
+        throw AntAlgorithmException("No ants were created from config file");
+    }
+    
 }
 
 const std::vector<double>& AntColonyOptimization::getBestPathPheromoneHistory() const {
@@ -319,12 +398,10 @@ std::pair<double, std::vector<AntEdge*>> AntColonyOptimization::findHamiltonianC
             }
         }
         
-        // Записываем глобально лучший результат и текущий результат итерации
         recordBestPathLength(bestCycleLength);
         recordCurrentPathLength(currentIterationBest > 0 ? currentIterationBest : bestCycleLength);
         recordBestPathPheromone(bestCycle);
         
-        // Обновление феромонов для гамильтонова цикла
         for (auto& pair : graph.getGraphNonConst()) {
             for (auto& edge : pair.second) {
                 double currentpheromone = edge.getPheromone();
@@ -336,7 +413,7 @@ std::pair<double, std::vector<AntEdge*>> AntColonyOptimization::findHamiltonianC
                 const auto& path = ant.getPath();
                 double pathLength = ant.getPathLength();
                 if (pathLength > 0) {
-                    double deltaPheromone = pheromoneDeposit / pathLength;
+                    double deltaPheromone = ant.getPheromoneDeposit() / pathLength;
                     for (AntEdge* edge : path) {
                         double currentPheromone = edge->getPheromone();
                         edge->setPheromone(currentPheromone + deltaPheromone);
@@ -346,7 +423,6 @@ std::pair<double, std::vector<AntEdge*>> AntColonyOptimization::findHamiltonianC
         }
         recordPheromoneState();
         
-        // Проверка на застой: если лучший путь не улучшился
         if (i > 0 && previousBestLength > 0) {
             if (std::abs(bestCycleLength - previousBestLength) < 1e-9) {
                 no_change_counter++;

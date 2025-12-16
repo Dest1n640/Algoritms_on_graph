@@ -6,7 +6,7 @@ best_path_pheromone = []
 best_path_length = []
 current_path_length = []
 
-with open('output.txt', 'r') as f:
+with open('../data/output.txt', 'r') as f:
     for line in f:
         parts = line.strip().split()
         if len(parts) >= 2 and parts[0].replace('.', '', 1).isdigit():
